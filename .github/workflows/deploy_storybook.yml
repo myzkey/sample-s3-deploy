@@ -20,18 +20,22 @@ jobs:
           node-version: 14.15.1
       - name: Install Dependencies
         run: npm ci
-      - name: Build storybook
-        run: npm run build-storybook
-      - name: set upload destination directory name
+      - name: clean up storybook-static
         run: |
           DEST_DIR=${{ github.event.pull_request.number }}
-          [ -z $DEST_DIR ] && DEST_DIR=main
-          echo "DEST_DIR=${DEST_DIR}" >> $GITHUB_ENV
+          aws s3 rm --recursive \
+            s3://${{ secrets.BUCKET_NAME }}/storybook
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-1
+      - name: Build storybook
+        run: npm run build-storybook
       - name: upload storybook-static
         run: |
           aws s3 cp --recursive \
             ./storybook-static \
-            s3://${{ secrets.BUCKET_NAME }}/storybook/${DEST_DIR}
+            s3://${{ secrets.BUCKET_NAME }}/storybook
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -45,18 +49,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: 'storybook preview created!!\n' +
-                'https://${{ secrets.BUCKET_NAME }}.s3-ap-northeast-1.amazonaws.com/storybook/${{ github.event.pull_request.number }}/index.html'
+                'https://${{ secrets.BUCKET_NAME }}.s3-ap-northeast-1.amazonaws.com/storybook/index.html'
             })
-  clean:
-    runs-on: ubuntu-latest
-    if: github.event.action == 'closed'
-    steps:
-      - name: remove storybook-static
-        run: |
-          DEST_DIR=${{ github.event.pull_request.number }}
-          aws s3 rm --recursive \
-            s3://${{ secrets.BUCKET_NAME }}/storybook/${DEST_DIR}
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ap-northeast-1
