@@ -12,9 +12,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     if: github.event.action != 'closed'
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v2
       - name: Setup Node.js for use with actions
